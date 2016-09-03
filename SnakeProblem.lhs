@@ -1,6 +1,8 @@
 Week 8 Tutorial Work
 --------------------
 
+Hello my name is soethgin
+
 Although the exercises you have been given so far are computationally
 interesting, they are a little boring from a practical perspective because
 they mostly revolve revolve around taking a single input and producing a
