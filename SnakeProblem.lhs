@@ -1,8 +1,6 @@
 Week 8 Tutorial Work
 --------------------
 
-Hello my name is soethgin
-
 Although the exercises you have been given so far are computationally
 interesting, they are a little boring from a practical perspective because
 they mostly revolve revolve around taking a single input and producing a
@@ -25,8 +23,8 @@ video is of the second kind of game.
 
 The first problem is that lectures haven't covered how to write interactive
 programs in Haskell, as these necessarily involve I/O: they have to read
-the user's input and write to a display. So that you don't have to learn the 
-details of this, I have supplied a short framework that will let you write  
+the user's input and write to a display. So that you don't have to learn the
+details of this, I have supplied a short framework that will let you write
 an interactive program without having to know this.
 
 As this is beyond the normal set of problem sheets, please prioritise
@@ -111,7 +109,7 @@ The map will be a list of rows, each of which will be a list of column
 cells. A cell can either empty, a piece of snake body, a flower the snake
 can eat, a wall or the snake's head.
 
-> data Cell = Empty | Body | Flower | Wall | Head deriving Eq
+> data Cell = Empty | Body | Snak | Wall | Head deriving Eq
 > type GameMap = [[Cell]]
 
 This means that, for a map m, the cell at co-ordinates (x,y) is (m!!x)!!y .
@@ -124,7 +122,7 @@ character representation for each possible kind of cell like this:
 > renderCell :: Cell -> Char
 > renderCell Empty  = ' '
 > renderCell Body   = 'o'
-> renderCell Flower = 'i'
+> renderCell Snak   = 'x'
 > renderCell Wall   = '#'
 > renderCell Head   = '@'
 
@@ -181,15 +179,15 @@ Now check that everything is working so far.
 Write a value initState that is the empty map with the snake's head set at
 co-ordinates (10, 10):
 
-> initState :: GameState
-> initState = Just (setCell emptyMap (10, 10) Head, Nothing)
+> initState1 :: GameState
+> initState1 = Just (setCell emptyMap (10, 10) Head, Nothing)
 
 Write a function gameStep that returns the GameState unchanged and a string
 representation of the map from the GameState:
 
-> gameStep :: GameState -> Maybe Char -> (GameState, String)
-> gameStep Nothing c = (Nothing, "")
-> gameStep (Just (m, dir)) c = (state, renderMap m)
+> gameStep1 :: GameState -> Maybe Char -> (GameState, String)
+> gameStep1 Nothing c = (Nothing, "")
+> gameStep1 (Just (m, dir)) c = (state, renderMap m)
 >     where state = Just (m, dir)
 
 We will replace these later.
@@ -203,10 +201,10 @@ and returns a new place one square in that direction. We need something
 similar here:
 
 > move :: Direction -> Place -> Place
-> move N (i, j) = (i, j - 1)
-> move S (i, j) = (i, j + 1)
-> move E (i, j) = (i + 1, j)
-> move W (i, j) = (i - 1, j)
+> move N (i, j) = (i-1, j)
+> move S (i, j) = (i+1, j)
+> move E (i, j) = (i, j+1)
+> move W (i, j) = (i, j-1)
 
 Note I am using left-handed co-ordinates, so (0,0) is at the top-left
 corner. This is often more natural in terminal-based systems, where the
@@ -226,6 +224,12 @@ direction, or Nothing if there is no direction:
 > charToDir 'j' = Just W
 > charToDir _ = Nothing
 
+> dirToChar :: Direction -> Char
+> dirToChar N = 'i'
+> dirToChar S = 'k'
+> dirToChar E = 'l'
+> dirToChar W = 'j'
+
 Justify your choice of keys.
 
 2.(iii)
@@ -238,7 +242,9 @@ Write a function that, given a map, returns the co-ordinates of the head.
 >     where coords = [(x, y) | x <- [0..mapHeight - 1], y <- [0..mapWidth - 1]]
 
 Alternative solution:
-head [(x, y) | x <- [0..mapHeight - 1], y <- [0..mapWidth - 1], getCell m (x, y) == Head]
+head [(x, y) | x <- [0..xCoords], y <- [0..yCoords], getCell m (x, y) == Head]
+where xCoords = mapWidth - 1
+      yCoords = mapHeight - 1
 
 (We can assume that a map will always contain exactly one snake head.)
 
@@ -247,7 +253,7 @@ into a place. For example, the 0th is cell is at (0,0) the 1st cell is at
 (1,0) and the 80th cell is at (0,1):
 
 > intToPlace :: Int -> Place
-> intToPlace = undefined
+> intToPlace p = (div p mapWidth, mod p mapWidth)
 
 2.(iv)
 
@@ -261,6 +267,22 @@ Now we can write a new gameStep function that:
 
 Don't forget to return the new state and the string representation of the
 map, as before.
+
+> gameStep2 :: GameState -> Maybe Char -> (GameState, String)
+> gameStep2 Nothing _                   = (Nothing, "")
+> gameStep2 (Just (m, Nothing)) Nothing = (Just (m, Nothing), renderMap m)
+> gameStep2 (Just (m, Just d)) Nothing  = gameStep2 (Just (m, Just d)) (Just (dirToChar d))
+> gameStep2 (Just (m, maybePrevDir)) (Just c)
+>   | not $ elem c "ijkl" = if (isNothing maybePrevDir)
+>                               then gameStep2 (Just (m, maybePrevDir)) Nothing
+>                               else gameStep2 (Just (m, maybePrevDir)) (Just (dirToChar (fromJust maybePrevDir)))
+>   | newHeadCell == Wall || newHeadCell == Body = (Nothing, "")
+>   | otherwise = (Just (newMap, Just newDir), renderMap newMap)
+>   where (Just newDir) = charToDir c
+>         prevHeadPlace = findHead m
+>         newHeadPlace  = move newDir prevHeadPlace
+>         newHeadCell   = getCell m newHeadPlace
+>         newMap        = setCell (setCell m prevHeadPlace Body) newHeadPlace Head
 
 2.(v)
 
@@ -283,35 +305,25 @@ computer to generate them instead.
 
 3.(i)
 
-First we need a "random" number generator. We can't generate a random number
-programatically; we need some external source of entropy. Unfortunately,
-accessing such a source would be an I/O operation. So instead we will use a
-"pseudo-random" number generator. This is a sequence of numbers that is
-sufficiently disorderly to appear random.
+First we need a "random" number generator. We can't generate a random number programatically; we need some external source of entropy. Unfortunately, accessing such a source would be an I/O operation. So instead we will use a "pseudo-random" number generator. This is a sequence of numbers that is sufficiently disorderly to appear random.
 
 A pseudo-random number generator still needs a random "seed" to start with.
-A common trick is to use the current time of day. Again, reading the time is
-an I/O action. Another common trick used in games with a "menu screen" is to
-use the time (in terms of number of game steps) between starting the game
-program and choosing the option to start the game. We could do that, but for
-simplicity, let's just use 1 all the time!
+A common trick is to use the current time of day. Again, reading the time is an I/O action. Another common trick used in games with a "menu screen" is to use the time (in terms of number of game steps) between starting the game program and choosing the option to start the game. We could do that, but for simplicity, let's just use 1 all the time!
 
 The random number generator we will use is described here:
 
 http://en.wikipedia.org/wiki/Lehmer_random_number_generator
 
-Write a function nextRand that, given X_k, computes X_(k+1). Take g to be 75
-and n to be 65537. (These values were used by the ZX Spectrum home computer
-in the 1980s.)
+Write a function nextRand that, given X_k, computes X_(k+1). Take g to be 75 and n to be 65537. (These values were used by the ZX Spectrum home computer in the 1980s.)
 
 Hence write rands, an infinite list of pseudo-random numbers (assuming the
 seed value X_0 = 1):
 
 > nextRand :: Int -> Int
-> nextRand = undefined
+> nextRand x = mod (75 * x) 65537
 
 > rands :: [Int]
-> rands = undefined
+> rands = iterate nextRand 218
 
 3.(ii)
 
@@ -321,7 +333,7 @@ the random number generator (and hence is in the range 0-65536), returns a
 random place on the map:
 
 > randToPlace :: Int -> Place
-> randToPlace = undefined
+> randToPlace x = intToPlace $ (mod x mapSquares)
 
 3.(iii)
 
@@ -335,7 +347,9 @@ a place, and sets the cell at that place to be of that type, but only if the
 cell was empty:
 
 > updateEmpty :: Cell -> GameMap -> Place -> GameMap
-> updateEmpty = undefined
+> updateEmpty c m p
+>     | getCell m p == Empty = setCell m p c
+>     | otherwise            = m
 
 3.(iv)
 
@@ -344,19 +358,27 @@ know when to stop adding more. Write a function that, given a cell type and
 a map, counts the number of cells of that type in the map:
 
 > countMapCells :: Cell -> GameMap -> Int
-> countMapCells = undefined
+> countMapCells c m
+>     | c == Wall = numOfCells - (mapHeight * mapWidth - 4)
+>     | otherwise = numOfCells
+>     where numOfCells = length (filter (== c) (concat m))
 
 3.(v)
 
 Now write a function populate that, given a map, a cell type, and a number
 n, returns an updated version of that map where "random" empty cells have
-been filled until there are at least n cells of the corresponding type:
+been filled until there are at least n (AT MOST) cells of the corresponding type:
 
 > populate :: GameMap -> Cell -> Int -> GameMap
-> populate = undefined
+> populate m c n = foldl (\x -> updateEmpty c x) m (map randToPlace (take n rands))
 
-For example, "populate m Flower 10" should return the map m updated to have
-at least 10 flowers at random positions. This will only be run at the start
+> placeSnakeHead :: GameMap -> Int -> GameMap
+> placeSnakeHead m i
+>     | getCell m (randToPlace (rands!!i)) == Empty = setCell m (randToPlace (rands!!i)) Head
+>     | otherwise = placeSnakeHead m (i+1)
+
+For example, "populate m Snak 10" should return the map m updated to have
+at least (AT MOST) 10 snaks at random positions. This will only be run at the start
 of the game, so it need not be too efficient.
 
 You may find it helpful to start with a function that, given a map and cell type,
@@ -369,20 +391,45 @@ cells of that type:
 3.(vi)
 
 Write a new initState that populates the empty map with 10 randomly-placed
-flowers, 10 randomly-placed walls (in addition to those in the empty map)
+snaks, 10 randomly-placed walls (in addition to those in the empty map)
 and 1 randomly-placed snake head.
+
+> initState :: GameState
+> initState = Just (populatedMap, Nothing)
+>     where mapWithSnaks = populate emptyMap Snak 10
+>           mapWithWalls = populate mapWithSnaks Wall 10
+>           populatedMap = placeSnakeHead mapWithWalls 1
 
 3.(vii)
 
-Update gameStep to stop the game if there are no flowers left on the map (so
+Update gameStep to stop the game if there are no snaks left on the map (so
 the player has won).
+
+> gameStep :: GameState -> Maybe Char -> (GameState, String)
+> gameStep Nothing _                   = (Nothing, "")
+> gameStep (Just (m, Nothing)) Nothing
+>     | countMapCells Snak m == 0 = (Nothing, "")
+>     | otherwise      = (Just (m, Nothing), renderMap m)
+> gameStep (Just (m, Just d)) Nothing  = gameStep (Just (m, Just d)) (Just (dirToChar d))
+> gameStep (Just (m, maybePrevDir)) (Just c)
+>     | countMapCells Snak m == 0 = (Nothing, "")
+>     | not $ elem c "ijkl" = if (isNothing maybePrevDir)
+>                                 then gameStep (Just (m, maybePrevDir)) Nothing
+>                                 else gameStep (Just (m, maybePrevDir)) (Just (dirToChar (fromJust maybePrevDir)))
+>     | newHeadCell == Wall || newHeadCell == Body = (Nothing, "")
+>     | otherwise = (Just (newMap, Just newDir), renderMap newMap)
+>     where (Just newDir) = charToDir c
+>           prevHeadPlace = findHead m
+>           newHeadPlace  = move newDir prevHeadPlace
+>           newHeadCell   = getCell m newHeadPlace
+>           newMap        = setCell (setCell m prevHeadPlace Body) newHeadPlace Head
 
 4. Moving snake tail
 
 4.(i)
 
 If you are feeling enthusiastic, change the game so that the snake has a
-fixed maximum length, which increases every time it eats a flower.
+fixed maximum length, which increases every time it eats a snak.
 
 You will need to extend the game state to track not only the maximum snake
 length, but also a list of snake body cells, either in the order they were
@@ -448,7 +495,7 @@ on average (that is, "amortised constant")?
 >                    showCursor
 >                    return ()
 > game (Just s) = do -- Wait a fraction of a second to make the game playable.
->                    threadDelay 100000
+>                    threadDelay 200000
 >                    -- Get a keypress if one is available.
 >                    c <- readKey
 >                    -- Using the current state and keypress, compute the new
@@ -468,4 +515,3 @@ on average (that is, "amortised constant")?
 >           hideCursor
 >           hSetEcho stdout False
 >           game initState
-
