@@ -1,4 +1,4 @@
-# Snak
+# Snake
 
 This is a Snake Game in Haskell, written by Axel Ronquist and Catherine Vlasov at MuniHac 2016.
 
