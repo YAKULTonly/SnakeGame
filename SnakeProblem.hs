@@ -97,8 +97,8 @@ gameStep2 (Just (m, maybePrevDir)) (Just c)
 nextRand :: Int -> Int
 nextRand x = mod (75 * x) 65537
 
-rands :: [Int]
-rands = iterate nextRand 60
+randsFrom :: Int -> [Int]
+randsFrom seed = iterate nextRand seed
 
 randToPlace :: Int -> Place
 randToPlace x = intToPlace $ (mod x mapSquares)
@@ -115,16 +115,17 @@ countMapCells c m
     where numOfCells = length (filter (== c) (concat m))
 
 populate :: GameMap -> Cell -> Int -> GameMap
-populate m c n = foldl (\x -> updateEmpty c x) m (map randToPlace (take n rands))
+populate m Wall n = foldl (\x -> updateEmpty Wall x) m (map randToPlace (take n (randsFrom 70)))
+populate m c n = foldl (\x -> updateEmpty c x) m (map randToPlace (take n (randsFrom 159)))
 
 placeSnakeHead :: GameMap -> Int -> GameMap
 placeSnakeHead m i
-    | getCell m (randToPlace (rands!!i)) == Empty = setCell m (randToPlace (rands!!i)) Head
+    | getCell m (randToPlace ((randsFrom 112)!!i)) == Empty = setCell m (randToPlace ((randsFrom 9)!!i)) Head
     | otherwise = placeSnakeHead m (i+1)
 
 initState :: GameState
 initState = Just (populatedMap, Nothing)
-    where mapWithSnaks = populate emptyMap Snak 10
+    where mapWithSnaks = populate emptyMap Snak 20
           mapWithWalls = populate mapWithSnaks Wall 10
           populatedMap = placeSnakeHead mapWithWalls 1
 
