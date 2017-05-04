@@ -44,14 +44,6 @@ setCell m (x,y) cell = (take x m) ++ [newRow] ++ (drop (x + 1) m)
     where newRow = (take y oldRow) ++ [cell] ++ (drop (y + 1) oldRow)
           oldRow = m!!x
 
-initState1 :: GameState
-initState1 = Just (setCell emptyMap (10, 10) Head, Nothing)
-
-gameStep1 :: GameState -> Maybe Char -> (GameState, String)
-gameStep1 Nothing c = (Nothing, "")
-gameStep1 (Just (m, dir)) c = (state, renderMap m)
-    where state = Just (m, dir)
-
 move :: Direction -> Place -> Place
 move N (i, j) = (i-1, j)
 move S (i, j) = (i+1, j)
