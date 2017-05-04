@@ -5,6 +5,7 @@ This is a snake game in Haskell, written by Axel Ronquist and Catherine Vlasov a
 The game is based on a problem sheet by Martin Lester for the Functional Programming course at the University of Oxford.
 
 In order to play, run the following commands in your terminal:
+
     git clone https://github.com/axelronquist/snake
     ghc SnakeProblem.hs
     ./SnakeProblem
