@@ -7,6 +7,7 @@ The game is based on a problem sheet by Martin Lester for the Functional Program
 In order to play, run the following commands in your terminal:
 
     git clone https://github.com/axelronquist/snake
+    cd snake
     ghc SnakeProblem.hs
     ./SnakeProblem
 
